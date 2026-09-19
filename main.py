@@ -126,6 +126,8 @@ def get_task(task_id:int):
             content={"error": f"Task {task_id} is not found!"}
         )
     
+    conn.close()
+    
     return row_to_task(row)
     
 @app.post(
@@ -139,13 +141,25 @@ def create_task(task_data: CreateTask):
             status_code=400,
             content={"error": "Title is required to create a new task!"}
         )
-    new_id = max(task['id'] for task in tasks) + 1
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "INSERT INTO tasks (title, done) VALUES (?, ?)",
+        (task_data.title, 0)
+    )
+    
+    new_id = cursor.lastrowid
+    
+    conn.commit()
+    conn.close()
+    
     new_task = {
         "id": new_id,
         "title": task_data.title,
         "done": False
     }
-    tasks.append(new_task)
+    
     return new_task
 
 @app.put(
