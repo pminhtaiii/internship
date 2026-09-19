@@ -1,6 +1,44 @@
 from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+import sqlite3
+
+DATABASE = "tasks.db"
+
+def get_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0
+        )               
+    """)
+    
+    cursor.execute("SELECT COUNT(*) FROM tasks")
+    count = cursor.fetchone()[0]
+    
+    if count == 0:
+        cursor.executemany(
+            "INSERT INTO tasks (title, done) VALUES (?, ?)",
+            [
+                ("learn new knowledge", 1),
+                ("get a job", 0),
+                ("become successful", 0)
+            ]
+        )
+    
+    conn.commit()
+    conn.close()
+    
+init_db()
 
 app = FastAPI()
 
@@ -68,13 +106,13 @@ def get_task(task_id:int):
 @app.post(
     "/tasks", status_code=201,
     summary="Create a new task",
-    description="Create a new task with a new id, return 404 if the title is None or an empty string"
+    description="Create a new task with a new id, return 400 if the title is None or an empty string"
 )
 def create_task(task_data: CreateTask):
     if task_data.title is None or task_data.title.strip() == "":
         return JSONResponse(
             status_code=400,
-            content={"Title is required to create a new task"}
+            content={"error": "Title is required to create a new task!"}
         )
     new_id = max(task['id'] for task in tasks) + 1
     new_task = {
@@ -114,6 +152,7 @@ def update_task(task_id: int, task_data: UpdateTask):
     )
 @app.delete(
     "/tasks/{task_id}",
+    status_code=204,
     summary="Delete a task",
     description="Delete a task based on task_id"
 )
