@@ -40,6 +40,13 @@ def init_db():
     
 init_db()
 
+def row_to_task(row):
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "done": bool(row["done"])
+    }
+
 app = FastAPI()
 
 tasks = [
@@ -87,7 +94,15 @@ def health():
     description="Return all tasks in memory"
 )
 def get_tasks():
-    return tasks
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM tasks')
+    rows = cursor.fetchall()
+    
+    conn.close()
+    
+    return [row_to_task(row) for row in rows]
 
 @app.get(
     "/tasks/{task_id}",
@@ -95,13 +110,23 @@ def get_tasks():
     description="Return a task by its task id"
 )
 def get_task(task_id:int):
-    for task in tasks:
-        if task["id"] == task_id:
-            return task
-    return JSONResponse(
-        status_code=404,
-        content={"error": f"Task {task_id} not found"}
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM tasks WHERE id = ?",
+        (task_id,)
     )
+    
+    row = cursor.fetchone()
+    
+    if row is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Task {task_id} is not found!"}
+        )
+    
+    return row_to_task(row)
     
 @app.post(
     "/tasks", status_code=201,
