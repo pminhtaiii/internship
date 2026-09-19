@@ -24,6 +24,10 @@ tasks = [
 
 class CreateTask(BaseModel):
     title: str | None = None
+    
+class UpdateTask(BaseModel):
+    title: str | None = None
+    done: bool | None = None
 
 @app.get("/")
 def root():
@@ -68,3 +72,27 @@ def create_task(task_data: CreateTask):
     }
     tasks.append(new_task)
     return new_task
+
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, task_data: UpdateTask):
+    if task_data.title is None and task_data.done is None:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "At least one type of content is needed to update"}
+        )
+    if task_data.title is not None and task_data.title.strip() == "":
+        return JSONResponse(
+            status_code=400,
+            content={"error": "A title can not be an empty string!"}
+        )
+    for task in tasks:
+        if (task['id'] == task_id):
+            if (task_data.title is not None):
+                task['title'] = task_data.title
+            if (task_data.done is not None):
+                task['done'] = task_data.done
+            return task
+    return JSONResponse(
+        status_code=404,
+        content={"error": f"Task {task_id} is not found!"}
+    )
