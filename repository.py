@@ -22,7 +22,7 @@ def init_postgres():
         )
     """)
     
-    cursor.execute("SELECT COUNT(*) FROM tasks")
+    cursor.execute("SELECT COUNT(*) AS count FROM tasks")
     count = cursor.fetchone()["count"]
     
     if count == 0:
@@ -63,3 +63,82 @@ def get_task_by_id(task_id):
     cursor.close()
     conn.close()
     return task
+
+def create_task_db(title):
+    conn = get_postgres_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        """
+        INSERT INTO tasks (title, done) 
+        VALUES (%s, %s)
+        RETURNING *
+        """,
+        (title, False)
+    )
+    
+    task = cursor.fetchone()
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return task
+
+def update_task_db(task_id, title, done):
+    conn = get_postgres_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM tasks WHERE id = %s", (task_id,)
+    )
+    
+    curr_task = cursor.fetchone()
+    
+    if curr_task is None:
+        cursor.close()
+        conn.close()
+        return None
+    
+    new_title = title if title is not None else curr_task["title"]
+    new_done = done if done is not None else curr_task["done"]
+    
+    cursor.execute(
+        """
+        UPDATE tasks
+        SET title = %s, done = %s
+        WHERE id = %s
+        RETURNING *
+        """,
+        (new_title, new_done, task_id)
+    )
+    
+    updated_task = cursor.fetchone()
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return updated_task
+
+def delete_task_db(task_id):
+    conn = get_postgres_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        """
+        DELETE FROM tasks
+        WHERE id = %s
+        RETURNING *
+        """,
+        (task_id,)
+    )
+    
+    deleted_task = cursor.fetchone()
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return deleted_task
+    
+    

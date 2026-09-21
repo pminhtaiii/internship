@@ -4,53 +4,11 @@ from pydantic import BaseModel
 from repository import (
     init_postgres,
     get_all_tasks,
-    get_task_by_id
+    get_task_by_id,
+    create_task_db,
+    update_task_db,
+    delete_task_db
 )
-import sqlite3
-
-DATABASE = "tasks.db"
-
-def get_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            done INTEGER NOT NULL DEFAULT 0
-        )               
-    """)
-    
-    cursor.execute("SELECT COUNT(*) FROM tasks")
-    count = cursor.fetchone()[0]
-    
-    if count == 0:
-        cursor.executemany(
-            "INSERT INTO tasks (title, done) VALUES (?, ?)",
-            [
-                ("learn new knowledge", 1),
-                ("get a job", 0),
-                ("become successful", 0)
-            ]
-        )
-    
-    conn.commit()
-    conn.close()
-    
-init_db()
-
-def row_to_task(row):
-    return {
-        "id": row["id"],
-        "title": row["title"],
-        "done": bool(row["done"])
-    }
     
 init_postgres()
 
@@ -129,26 +87,8 @@ def create_task(task_data: CreateTask):
             status_code=400,
             content={"error": "Title is required to create a new task!"}
         )
-    conn = get_connection()
-    cursor = conn.cursor()
     
-    cursor.execute(
-        "INSERT INTO tasks (title, done) VALUES (?, ?)",
-        (task_data.title, 0)
-    )
-    
-    new_id = cursor.lastrowid
-    
-    conn.commit()
-    conn.close()
-    
-    new_task = {
-        "id": new_id,
-        "title": task_data.title,
-        "done": False
-    }
-    
-    return new_task
+    return create_task_db(task_data.title)
 
 @app.put(
     "/tasks/{task_id}",
@@ -166,52 +106,16 @@ def update_task(task_id: int, task_data: UpdateTask):
             status_code=400,
             content={"error": "A title can not be an empty string!"}
         )
-    conn = get_connection()
-    cursor = conn.cursor()
     
-    cursor.execute(
-        "SELECT * FROM tasks WHERE id = ?",
-        (task_id,)
-    )
+    task = update_task_db(task_id, task_data.title, task_data.done)
     
-    row = cursor.fetchone()
-    
-    if row is None:
-        conn.close()
+    if task is None:
         return JSONResponse(
             status_code=404,
             content={"error": f"Task {task_id} is not found!"}
         )
-    
-    new_title = (
-        task_data.title
-        if task_data.title is not None
-        else row['title']
-    )
-    
-    new_done = (
-        task_data.done
-        if task_data.done is not None
-        else row['done']
-    )
-    
-    cursor.execute(
-        """
-        UPDATE tasks
-        SET title = ?, done = ?
-        WHERE id = ?
-        """,
-        (new_title, new_done, task_id)
-    )
-    
-    conn.commit()
-    conn.close()
-    
-    return {
-        "id": task_id,  
-        "title": new_title,
-        "done": new_done
-    }
+        
+    return task
     
 @app.delete(
     "/tasks/{task_id}",
@@ -220,22 +124,11 @@ def update_task(task_id: int, task_data: UpdateTask):
     description="Delete a task based on task_id"
 )
 def delete_task(task_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    deleted_task = delete_task_db(task_id)
     
-    cursor.execute(
-        "DELETE FROM tasks WHERE id = ?",
-        (task_id,)
-    )
-    
-    if cursor.rowcount == 0:
-        conn.close()
+    if deleted_task is None:
         return JSONResponse(
             status_code=404,
             content={"error": f"Task {task_id} is not found!"}
         )
-    
-    conn.commit()
-    conn.close()
-    
-    return Response(status_code=204)
+    return deleted_task
