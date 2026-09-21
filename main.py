@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from repository import init_postgres
 import sqlite3
 
 DATABASE = "tasks.db"
@@ -46,6 +47,8 @@ def row_to_task(row):
         "title": row["title"],
         "done": bool(row["done"])
     }
+    
+init_postgres()
 
 app = FastAPI()
 

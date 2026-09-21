@@ -23,11 +23,11 @@ def init_postgres():
     """)
     
     cursor.execute("SELECT COUNT(*) FROM tasks")
-    count = cursor.fetchone()[0]
+    count = cursor.fetchone()["count"]
     
     if count == 0:
         cursor.executemany(
-            "INSERT INTO tasks (title, done) VALUES (?, ?)",
+            "INSERT INTO tasks (title, done) VALUES (%s, %s)",
             [
                 ("learn new knowledge", True),
                 ("get a job", False),
@@ -36,5 +36,5 @@ def init_postgres():
         )
     
     conn.commit()
-    conn.close()
     cursor.close()
+    conn.close()
