@@ -1,6 +1,9 @@
 # Task API
 
-A simple CRUD API built with FastAPI and SQLite.
+A simple CRUD API built with FastAPI and PostgreSQL.
+
+The application runs with Docker Compose.  
+Both the FastAPI application and PostgreSQL database can be started with one command.
 
 ## Features
 
@@ -9,37 +12,67 @@ A simple CRUD API built with FastAPI and SQLite.
 - Get a task by ID
 - Update a task
 - Delete a task
-- Store task data in SQLite
-- Data remains after server restart
-- Swagger UI for testing API
+- Store data in PostgreSQL
+- Data persists after container restart
+- Swagger UI for API testing
 
 ## Tech Stack
 
 - Python
 - FastAPI
-- SQLite
-- Uvicorn
-- Pydantic
+- PostgreSQL
+- Psycopg
+- Docker
+- Docker Compose
 
-## Run the project
+## Project Structure
 
-Install dependencies:
-
-```bash
-pip install fastapi uvicorn
+```text
+internship/
+├── main.py
+├── repository.py
+├── requirements.txt
+├── Dockerfile
+├── compose.yaml
+├── .env
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
-Run the server:
+## Environment Variables
 
-```bash
-uvicorn main:app --reload
+Create a `.env` file from `.env.example`.
+
+Example:
+
+```env
+DATABASE_URL=postgres://postgres:dev@localhost:5432/tasks
 ```
 
-Open Swagger UI:
+The `.env` file is ignored by Git.
+
+## Run with Docker Compose
+
+Start the whole application:
+
+```bash
+docker compose up --build
+```
+
+After the containers start, open:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+To stop the application:
+
+```bash
+docker compose down
+```
+
+The PostgreSQL data is stored in a Docker volume, so the data remains after stopping and starting the containers again.
 
 ## API Endpoints
 
@@ -51,68 +84,71 @@ http://127.0.0.1:8000/docs
 | PUT | `/tasks/{task_id}` | Update a task |
 | DELETE | `/tasks/{task_id}` | Delete a task |
 
-## SQLite
-
-This project uses SQLite because it is simple, lightweight, and does not require a separate database server.
-
-The database is stored in:
-
-```text
-tasks.db
-```
-
-The database and the `tasks` table are created automatically when the application starts.
-
-Task data is stored in the database, so it is still available after restarting the server.
-
-## SQL Queries
-
-I used DB Browser for SQLite to run SQL queries directly.
+## Example
 
 Get all tasks:
 
-```sql
-SELECT * FROM tasks;
+```bash
+curl -i http://127.0.0.1:8000/tasks
 ```
 
-Get completed tasks:
+Create a task:
 
-```sql
-SELECT * FROM tasks WHERE done = 1;
+```bash
+curl -i -X POST http://127.0.0.1:8000/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Learn Docker"}'
 ```
 
-Count all tasks:
+## PostgreSQL
 
-```sql
-SELECT COUNT(*) FROM tasks;
+PostgreSQL runs inside a Docker container.
+
+The `tasks` table is created automatically when the application starts.
+
+Three example tasks are added only when the table is empty.
+
+## Persistence
+
+The PostgreSQL service uses a Docker volume.
+
+For example:
+
+1. Create a new task.
+2. Run:
+
+```bash
+docker compose down
 ```
 
-Mark all tasks as completed:
+3. Start again:
 
-```sql
-UPDATE tasks SET done = 1;
+```bash
+docker compose up
 ```
 
-Delete completed tasks:
+4. Call `GET /tasks`.
 
-```sql
-DELETE FROM tasks WHERE done = 1;
-```
-
-Example:
-
-```sql
-SELECT COUNT(*) FROM tasks;
-```
-
-This query returns the total number of tasks in the database.
-
-Changes made directly in DB Browser can also be seen through `GET /tasks` because the API and DB Browser use the same `tasks.db` file.
+The created task is still available because the database data is stored in the Docker volume.
 
 ## Database Screenshot
 
-Add a screenshot of `tasks.db` opened in DB Browser here:
+Add a screenshot of the PostgreSQL data here:
 
 ```markdown
-![Database Screenshot](docs/db-browser.png)
+![Database Screenshot](docs/postgres.png)
+```
+
+## Git Ignore
+
+The `.env` file must not be committed to Git.
+
+Example `.gitignore`:
+
+```text
+.venv/
+__pycache__/
+*.pyc
+.env
+tasks.db
 ```
