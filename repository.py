@@ -38,3 +38,28 @@ def init_postgres():
     conn.commit()
     cursor.close()
     conn.close()
+    
+def get_all_tasks():
+    conn = get_postgres_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM tasks")
+    tasks = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    return tasks
+    
+def get_task_by_id(task_id):
+    conn = get_postgres_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM tasks where id = %s", (task_id,)
+    )
+    
+    task = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    return task
