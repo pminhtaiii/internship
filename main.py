@@ -1,7 +1,11 @@
 from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from repository import init_postgres
+from repository import (
+    init_postgres,
+    get_all_tasks,
+    get_task_by_id
+)
 import sqlite3
 
 DATABASE = "tasks.db"
@@ -97,15 +101,7 @@ def health():
     description="Return all tasks in memory"
 )
 def get_tasks():
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM tasks')
-    rows = cursor.fetchall()
-    
-    conn.close()
-    
-    return [row_to_task(row) for row in rows]
+    return get_all_tasks()
 
 @app.get(
     "/tasks/{task_id}",
@@ -113,26 +109,15 @@ def get_tasks():
     description="Return a task by its task id"
 )
 def get_task(task_id:int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    task = get_task_by_id(task_id)
     
-    cursor.execute(
-        "SELECT * FROM tasks WHERE id = ?",
-        (task_id,)
-    )
-    
-    row = cursor.fetchone()
-    
-    if row is None:
+    if task is None:
         return JSONResponse(
             status_code=404,
             content={"error": f"Task {task_id} is not found!"}
         )
-    
-    conn.close()
-    
-    return row_to_task(row)
-    
+    return task
+
 @app.post(
     "/tasks", status_code=201,
     summary="Create a new task",
