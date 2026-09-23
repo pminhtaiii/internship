@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from repository import (
@@ -133,3 +133,40 @@ def delete_task(task_id: int):
             content={"error": f"Task {task_id} is not found!"}
         )
     return deleted_task
+
+@app.post(
+    "/public/info",
+    summary="Public information",
+    description="This endpoint can be accessed without authentication"
+)
+def public_info():
+    return {"message": "Welcome stranger! This info is public."}
+
+@app.post(
+    "/protected/profile",
+    summary="Protected information",
+    description="This profile is only be accessed by authenticated users"
+)
+def protected_profile(authorization: str | None = Header(default=None)):
+    if authorization is None:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+    if not authorization.startswith("Bearer "):
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+    token = authorization.removeprefix("Bearer ").strip()
+    
+    if token == "":
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+        
+    return {
+        "message": "Token received",
+        "token": token
+    }
