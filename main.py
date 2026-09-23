@@ -9,6 +9,7 @@ from repository import (
     update_task_db,
     delete_task_db
 )
+from auth import supabase
     
 init_postgres()
 
