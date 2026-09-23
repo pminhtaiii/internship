@@ -15,30 +15,16 @@ init_postgres()
 
 app = FastAPI()
 
-tasks = [
-    {
-        "id": 1,
-        "title": "learn new knowledge",
-        "done": True
-    },
-    {
-        "id": 2,
-        "title": "get a job",
-        "done": False
-    },
-    {
-        "id": 3,
-        "title": "become successful",
-        "done": False
-    },
-]
-
 class CreateTask(BaseModel):
     title: str | None = None
     
 class UpdateTask(BaseModel):
     title: str | None = None
     done: bool | None = None
+    
+class AuthData(BaseModel):
+    email: str | None = None
+    password: str | None = None
 
 @app.get("/")
 def root():
@@ -57,7 +43,7 @@ def health():
 @app.get(
     "/tasks",
     summary="Get all the tasks available",
-    description="Return all tasks in memory"
+    description="Return all tasks from PostgresSQL"
 )
 def get_tasks():
     return get_all_tasks()
@@ -132,4 +118,58 @@ def delete_task(task_id: int):
             status_code=404,
             content={"error": f"Task {task_id} is not found!"}
         )
-    return deleted_task
+    return Response(status_code=204)
+
+@app.post(
+    "/auth/signup",
+    status_code=201,
+    summary="Sign up",
+    description="Sign up as a new user with email and password"
+)
+
+def signup(auth_data: AuthData):
+    if auth_data.email is None or auth_data.password is None or auth_data.email.strip() == "" or auth_data.password.strip() == "":
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Email and password are required to sign up!"}
+        )
+    try:
+        response = supabase.auth.sign_up({
+            "email": auth_data.email,
+            "password": auth_data.password
+        })
+        return {
+            "id": str(response.user.id),
+            "email": response.user.email
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "An error occurred while signing up"}
+        )
+    
+@app.post(
+    "/auth/login",
+    summary="Login",
+    description="Login a user with an existed account"
+)
+def login(auth_data: AuthData):
+    if auth_data.email is None or auth_data.password is None or auth_data.email.strip() == "" or auth_data.password.strip() == "":
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Email and password are required to login!"}
+        )
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": auth_data.email,
+            "password": auth_data.password
+        })
+        return {
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Invalid login credentials"}
+        )
