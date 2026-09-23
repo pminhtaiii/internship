@@ -172,9 +172,8 @@ def login(auth_data: AuthData):
             status_code=401,
             content={"error": "Invalid login credentials"}
         )
-    return Response(status_code=204)
 
-@app.post(
+@app.get(
     "/public/info",
     summary="Public information",
     description="This endpoint can be accessed without authentication"
@@ -182,7 +181,7 @@ def login(auth_data: AuthData):
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
-@app.post(
+@app.get(
     "/protected/profile",
     summary="Protected information",
     description="This profile is only be accessed by authenticated users"
