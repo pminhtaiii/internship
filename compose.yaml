@@ -7,6 +7,8 @@ services:
       DATABASE_URL: postgres://postgres:dev@db:5432/tasks
     depends_on:
       - db
+    env_file:
+      - .env
 
   db:
     image: postgres:17
