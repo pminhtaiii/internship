@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from repository import (
@@ -126,7 +126,6 @@ def delete_task(task_id: int):
     summary="Sign up",
     description="Sign up as a new user with email and password"
 )
-
 def signup(auth_data: AuthData):
     if auth_data.email is None or auth_data.password is None or auth_data.email.strip() == "" or auth_data.password.strip() == "":
         return JSONResponse(
@@ -173,3 +172,41 @@ def login(auth_data: AuthData):
             status_code=401,
             content={"error": "Invalid login credentials"}
         )
+    return Response(status_code=204)
+
+@app.post(
+    "/public/info",
+    summary="Public information",
+    description="This endpoint can be accessed without authentication"
+)
+def public_info():
+    return {"message": "Welcome stranger! This info is public."}
+
+@app.post(
+    "/protected/profile",
+    summary="Protected information",
+    description="This profile is only be accessed by authenticated users"
+)
+def protected_profile(authorization: str | None = Header(default=None)):
+    if authorization is None:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+    if not authorization.startswith("Bearer "):
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+    token = authorization.removeprefix("Bearer ").strip()
+    
+    if token == "":
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+        
+    return {
+        "message": "Token received",
+        "token": token
+    }
