@@ -192,3 +192,30 @@ def protected_profile(current_user = Depends(get_current_user)):
         "email": current_user.email,
         "created_at": str(current_user.created_at)
     }
+
+@app.get(
+    "protected/dashboard",
+    summary="Protected dashboard",
+    description="The dashboard for authenticated users"
+)
+def protected_dashboard(current_user = Depends(get_current_user)):
+    return {
+        "message": "Welcome to our dashboard",
+        "user_id": str(current_user.id),
+        "email": current_user.email
+    }
+    
+@app.post(
+    "/auth/logout",
+    summary="Logout",
+    status_code=204
+)
+def logout(current_user = Depends(get_current_user)):
+    try:
+        supabase.auth.sign_out()
+        return Response(status_code=204)
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Log out failed!"}
+        )
