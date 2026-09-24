@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, Header
+from fastapi import FastAPI, Response, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from repository import (
@@ -9,7 +9,7 @@ from repository import (
     update_task_db,
     delete_task_db
 )
-from auth import supabase
+from auth import supabase, get_current_user
     
 init_postgres()
 
@@ -186,36 +186,9 @@ def public_info():
     summary="Protected information",
     description="This profile is only be accessed by authenticated users"
 )
-def protected_profile(authorization: str | None = Header(default=None)):
-    if authorization is None:
-        return JSONResponse(
-            status_code=401,
-            content={"error": "Access token required"}
-        )
-    if not authorization.startswith("Bearer "):
-        return JSONResponse(
-            status_code=401,
-            content={"error": "Access token required"}
-        )
-    token = authorization.removeprefix("Bearer ").strip()
-    
-    if token == "":
-        return JSONResponse(
-            status_code=401,
-            content={"error": "Access token required"}
-        )
-        
-    try:
-        response = supabase.auth.get_user(token)
-        user = response.user
-        
-        return {
-            "id": str(user.id),
-            "email": user.email,
-            "create_at": str(user.created_at)
-        }
-    except Exception:
-        return JSONResponse(
-            status_code=401,
-            content={"error": "Invalid or expired token"}
-        )
+def protected_profile(current_user = Depends(get_current_user)):
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "created_at": str(current_user.created_at)
+    }
